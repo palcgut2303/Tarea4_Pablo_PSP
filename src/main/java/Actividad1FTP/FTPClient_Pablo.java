@@ -33,11 +33,15 @@ public class FTPClient_Pablo {
         String usuario = "";
         String contrasena = "";
         boolean login;
+        boolean esSalida = false;
+        String respuesta = "";
 
         
-            System.out.println("BIENVENIDO AL SERVIDOR FPT.\nIntroduce el servidor al que conectarte:");
+        
+        while (!esSalida) {
+            System.out.println("BIENVENIDO A FPT.\nIntroduce el servidor al que conectarte:");
             servidor = sc.nextLine();
-
+            
             cliente.addProtocolCommandListener(new PrintCommandListener(new PrintWriter(System.out)));
             cliente.connect(servidor);
             cliente.enterLocalPassiveMode();
@@ -56,9 +60,7 @@ public class FTPClient_Pablo {
 
                 if (files != null) {
 
-                    
-                    java.util.Date registroFecha = new java.util.Date(System.currentTimeMillis());
-
+                    Date registroFecha = new Date();
                     String mensaje = "\nHora de conexion: " + registroFecha.toString();
                     InputStream inputStream = new ByteArrayInputStream(mensaje.getBytes(StandardCharsets.UTF_8));
 
@@ -73,8 +75,18 @@ public class FTPClient_Pablo {
                 System.out.println("CREDENCIALES INCORRECTAS.");
             }
 
-            
-        
+            System.out.println("¿QUIERES DESCONECTARTE DEL SERVIDOR? (S/N)");
+            respuesta = sc.nextLine();
+
+            if (respuesta.equalsIgnoreCase("S")) {
+                esSalida = true;
+                System.out.println("¡HASTA PRONTO!");
+                cliente.disconnect();
+            } else {
+                cliente.disconnect();
+                esSalida = false;
+            }
+        }
 
     }
 
