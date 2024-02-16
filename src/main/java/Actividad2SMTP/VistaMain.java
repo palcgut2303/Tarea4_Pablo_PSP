@@ -5,9 +5,11 @@
  */
 package Actividad2SMTP;
 
+import jakarta.mail.AuthenticationFailedException;
 import jakarta.mail.Message;
 import jakarta.mail.MessagingException;
 import jakarta.mail.Multipart;
+import jakarta.mail.NoSuchProviderException;
 import jakarta.mail.PasswordAuthentication;
 import jakarta.mail.Session;
 import jakarta.mail.Transport;
@@ -18,6 +20,7 @@ import jakarta.mail.internet.MimeMessage;
 import jakarta.mail.internet.MimeMultipart;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -35,18 +38,21 @@ public class VistaMain extends javax.swing.JFrame {
      */
     final Properties prop = new Properties();
     Session mailSession;
-
+    Transport transportValidation = null;
     String usuario = "";
     String clave = "";
     String servidor = "";
     String puerto = "";
-    File file = null;
+    ArrayList<File> file = new ArrayList<>();
+    int numFile = 0;
 
     public VistaMain() {
         initComponents();
         setLocationRelativeTo(null);
         jBAdArchivo.setEnabled(false);
         jBEnviar.setEnabled(false);
+        jBDesconectar.setEnabled(false);
+        jTRemitente.setEnabled(false);
     }
 
     /**
@@ -82,6 +88,7 @@ public class VistaMain extends javax.swing.JFrame {
         jBEnviar = new javax.swing.JButton();
         jTArchivo = new javax.swing.JTextField();
         jBAdArchivo = new javax.swing.JButton();
+        jBDesconectar = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -167,6 +174,13 @@ public class VistaMain extends javax.swing.JFrame {
             }
         });
 
+        jBDesconectar.setText("DESCONECTAR");
+        jBDesconectar.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jBDesconectarActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -208,7 +222,9 @@ public class VistaMain extends javax.swing.JFrame {
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                                 .addComponent(jTClave, javax.swing.GroupLayout.PREFERRED_SIZE, 124, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addGap(18, 18, 18)
-                                .addComponent(jBConectar, javax.swing.GroupLayout.PREFERRED_SIZE, 158, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addComponent(jBConectar, javax.swing.GroupLayout.PREFERRED_SIZE, 158, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addComponent(jBDesconectar))
                             .addGroup(layout.createSequentialGroup()
                                 .addComponent(jLabel5)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -240,7 +256,8 @@ public class VistaMain extends javax.swing.JFrame {
                     .addComponent(jTUsuario, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel4)
                     .addComponent(jTClave, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jBConectar))
+                    .addComponent(jBConectar)
+                    .addComponent(jBDesconectar))
                 .addGap(35, 35, 35)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel5)
@@ -269,40 +286,54 @@ public class VistaMain extends javax.swing.JFrame {
 
     private void jBConectarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jBConectarActionPerformed
 
-        usuario = jTUsuario.getText();
-        clave = jTClave.getText();
-        servidor = jTServidorSMPT.getText();
-        puerto = jTPuerto.getText();
-
-        prop.put("mail.smtp.username", usuario);
-        prop.put("mail.smtp.password", clave);
-        prop.put("mail.smtp.host", servidor);
-        prop.put("mail.smtp.port", puerto);
-        prop.put("mail.smtp.auth", "true");
-
-        if (jRadioButtonCon.isEnabled()) {
-            prop.put("mail.smtp.starttls.enable", "true"); // TLS
+        if (jTServidorSMPT.getText().equalsIgnoreCase("") || jTPuerto.getText().equalsIgnoreCase("") || jTUsuario.getText().equalsIgnoreCase("") || jTClave.getText().equalsIgnoreCase("") || (jRadioButtonCon.isSelected() == false && jRadioButtonSin.isSelected() == false)) {
+            JOptionPane.showMessageDialog(this, "CREDENCIALES INCOMPLETAS", "ERROR", JOptionPane.ERROR_MESSAGE);
         } else {
-            prop.put("mail.smtp.starttls.enable", "false"); //SIN TLS
-        }
+            try {
+                usuario = jTUsuario.getText();
+                clave = jTClave.getText();
+                servidor = jTServidorSMPT.getText();
+                puerto = jTPuerto.getText();
 
-        prop.put("mail.debug", "true");
+                prop.put("mail.smtp.username", usuario);
+                prop.put("mail.smtp.password", clave);
+                prop.put("mail.smtp.host", servidor);
+                prop.put("mail.smtp.port", puerto);
+                prop.put("mail.smtp.auth", "true");
+                prop.put("mail.debug", "true");
+                prop.put("mail.smtp.starttls.enable", jRadioButtonCon.isSelected()); 
+               
 
-        // Create the Session with the user credentials
-        mailSession = Session.getInstance(prop, new jakarta.mail.Authenticator() {
-            @Override
-            protected PasswordAuthentication getPasswordAuthentication() {
-                return new PasswordAuthentication(prop.getProperty("mail.smtp.username"),
-                        prop.getProperty("mail.smtp.password"));
+                // Create the Session with the user credentials
+                mailSession = Session.getInstance(prop, new jakarta.mail.Authenticator() {
+                    @Override
+                    protected PasswordAuthentication getPasswordAuthentication() {
+                        return new PasswordAuthentication(prop.getProperty("mail.smtp.username"),
+                                prop.getProperty("mail.smtp.password"));
+                    }
+
+                });
+
+                transportValidation = mailSession.getTransport();
+                transportValidation.connect();
+
+                JOptionPane.showMessageDialog(this, "CONECTADO AL SERVIDOR");
+                jBEnviar.setEnabled(true);
+                jBAdArchivo.setEnabled(true);
+                jBDesconectar.setEnabled(true);
+                jBConectar.setEnabled(false);
+                jTRemitente.setText(jTUsuario.getText());
+            } catch (AuthenticationFailedException ex) {
+                Logger.getLogger(VistaMain.class.getName()).log(Level.SEVERE, null, ex);
+                JOptionPane.showMessageDialog(this, "CREDENCIALES INCORRECTAS", "ERROR", JOptionPane.ERROR_MESSAGE);
+            } catch (NoSuchProviderException ex) {
+                Logger.getLogger(VistaMain.class.getName()).log(Level.SEVERE, null, ex);
+                JOptionPane.showMessageDialog(this, "NO SE HA PODIDO CONECTAR CON EL SERVIDOR", "ERROR", JOptionPane.ERROR_MESSAGE);
+            } catch (MessagingException ex) {
+                Logger.getLogger(VistaMain.class.getName()).log(Level.SEVERE, null, ex);
+                JOptionPane.showMessageDialog(this, "NO SE HA PODIDO CONECTAR CON EL SERVIDOR", "ERROR", JOptionPane.ERROR_MESSAGE);
             }
 
-        });
-        if (mailSession != null) {
-            JOptionPane.showMessageDialog(this, "CONECTADO AL SERVIDOR");
-            jBEnviar.setEnabled(true);
-            jBAdArchivo.setEnabled(true);
-        } else {
-            JOptionPane.showMessageDialog(this, "NO SE HA PODIDO CONECTAR CON EL SERVIDOR");
         }
 
     }//GEN-LAST:event_jBConectarActionPerformed
@@ -310,38 +341,61 @@ public class VistaMain extends javax.swing.JFrame {
     private void jBEnviarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jBEnviarActionPerformed
 
         try {
-            Message message = new MimeMessage(mailSession);
-            // Set From and subject email properties
-            message.setFrom(new InternetAddress(usuario));
-            message.setSubject(jTAsunto.getText());
+            if (jTRemitente.getText().equalsIgnoreCase("") || jTDestinatario.getText().equalsIgnoreCase("")) {
 
-            // Set to, cc & bcc recipients
-            InternetAddress[] toEmailAddresses
-                    = InternetAddress.parse(jTDestinatario.getText());
+                JOptionPane.showMessageDialog(this, "INTRODUCE UN REMITENTE Y DESTINATARIO", "ERROR", JOptionPane.ERROR_MESSAGE);
+            } else {
+                if (jTextAreaMensaje.getText().equalsIgnoreCase("") && jTArchivo.getText().equalsIgnoreCase("")) {
+                    JOptionPane.showMessageDialog(this, "INTRODUCE UN MENSAJE O ARCHIVO PARA ENVIAR", "ERROR", JOptionPane.ERROR_MESSAGE);
+                } else {
+                    if (!jTAsunto.getText().equals("")) {
+                        Message message = new MimeMessage(mailSession);
+                        // Set From and subject email properties
+                        message.setFrom(new InternetAddress(usuario));
+                        message.setSubject(jTAsunto.getText());
 
-            message.setRecipients(Message.RecipientType.TO, toEmailAddresses);
+                        // Set to, cc & bcc recipients
+                        InternetAddress[] toEmailAddresses
+                                = InternetAddress.parse(jTDestinatario.getText());
 
-            Multipart multipart = new MimeMultipart();
+                        message.setRecipients(Message.RecipientType.TO, toEmailAddresses);
 
-            // create the 1st message body part
-            MimeBodyPart messageBodyPart = new MimeBodyPart();
-            // Add a plain message (HTML can also be added with setContent)
-            messageBodyPart.setText(jTextAreaMensaje.getText());
-            // Add the BodyPart to the Multipart object
-            multipart.addBodyPart(messageBodyPart);
+                        Multipart multipart = new MimeMultipart();
 
-            // 2nd. bodyPart with an attached file
-            messageBodyPart = new MimeBodyPart();
-            messageBodyPart.attachFile(file);
-            // Add the BodyPart to the Multipart object
-            multipart.addBodyPart(messageBodyPart);
+                        // create the 1st message body part
+                        MimeBodyPart messageBodyPart = new MimeBodyPart();
+                        // Add a plain message (HTML can also be added with setContent)
+                        if (jTextAreaMensaje.getText().equalsIgnoreCase("")) {
+                            messageBodyPart.setText("SIN MENSAJE");
+                        } else {
+                            messageBodyPart.setText(jTextAreaMensaje.getText());
+                        }
 
-            // Add the multipart object to the message
-            message.setContent(multipart);
+                        // Add the BodyPart to the Multipart object
+                        multipart.addBodyPart(messageBodyPart);
 
-            Transport.send(message);
-            
-            vaciarCampos();
+                        for (int i = 0; i < file.size(); i++) {
+                            // 2nd. bodyPart with an attached file
+                            messageBodyPart = new MimeBodyPart();
+                            messageBodyPart.attachFile(file.get(i));
+                            // Add the BodyPart to the Multipart object
+                            multipart.addBodyPart(messageBodyPart);
+                        }
+
+                        // Add the multipart object to the message
+                        message.setContent(multipart);
+
+                        Transport.send(message);
+
+                        vaciarCampos();
+
+                        JOptionPane.showMessageDialog(this, "MENSAJE ENVIADO");
+                    } else {
+                        JOptionPane.showMessageDialog(this, "INTRODUCE UN ASUNTO", "ERROR", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            }
+
         } catch (AddressException ex) {
             Logger.getLogger(VistaMain.class.getName()).log(Level.SEVERE, null, ex);
         } catch (MessagingException ex) {
@@ -361,22 +415,48 @@ public class VistaMain extends javax.swing.JFrame {
         if (returnValue == JFileChooser.APPROVE_OPTION) {
             String selectedFilePath = fileChooser.getSelectedFile().getPath();
             jTArchivo.setText(selectedFilePath);
-            file = fileChooser.getSelectedFile();
+            if (file.size() > 0) {
+                jTArchivo.setText("Mas de 1 Arhivo Adjunto....");
+            }
+            File fChoser = fileChooser.getSelectedFile();
+            file.add(fChoser);
+
         } else {
             System.out.println("No file selected.");
         }
     }//GEN-LAST:event_jBAdArchivoActionPerformed
 
+    private void jBDesconectarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jBDesconectarActionPerformed
+        
+        try {
+            transportValidation.close();
+            transportValidation = null;
+            
+            vaciarCampos();
+            jTServidorSMPT.setText("");
+            jTPuerto.setText("");
+            jTUsuario.setText("");
+            jTClave.setText("");
+            
+            jBEnviar.setEnabled(false);
+            jBAdArchivo.setEnabled(false);
+            jBConectar.setEnabled(true);
+            jBDesconectar.setEnabled(false);
+        } catch (MessagingException ex) {
+            Logger.getLogger(VistaMain.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }//GEN-LAST:event_jBDesconectarActionPerformed
+
     private void vaciarCampos() {
-       
+
         jTRemitente.setText("");
         jTDestinatario.setText("");
         jTArchivo.setText("");
         jTextAreaMensaje.setText("");
         jTAsunto.setText("");
-        
+
     }
-    
+
     /**
      * @param args the command line arguments
      */
@@ -417,6 +497,7 @@ public class VistaMain extends javax.swing.JFrame {
     private javax.swing.ButtonGroup buttonGroup1;
     private javax.swing.JButton jBAdArchivo;
     private javax.swing.JButton jBConectar;
+    private javax.swing.JButton jBDesconectar;
     private javax.swing.JButton jBEnviar;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
@@ -440,5 +521,4 @@ public class VistaMain extends javax.swing.JFrame {
     private javax.swing.JTextArea jTextAreaMensaje;
     // End of variables declaration//GEN-END:variables
 
-    
 }
